@@ -1,0 +1,32 @@
+{
+  "kind": "random_model_train_reload_evaluate_integration",
+  "train_steps": 2,
+  "train_loss": 4.451836347579956,
+  "chat_train_loss": 4.451777458190918,
+  "baseline_success": false,
+  "evaluation_calls": 2,
+  "output_tokens": 16,
+  "task_success": false,
+  "final_answer_tasks": 3,
+  "final_answer_accuracy": 0.0,
+  "study_zero_accept_status": "skipped_zero_accepted",
+  "offline_hub_resolution_mocked": true,
+  "runtime": {
+    "model": "C:\\Users\\BIT\\AppData\\Local\\Temp\\toollearn-integration-4t_30l3u\\base",
+    "adapter": "C:\\Users\\BIT\\AppData\\Local\\Temp\\toollearn-integration-4t_30l3u\\adapter",
+    "model_revision": null,
+    "tokenizer_revision": null,
+    "requested_revision": null,
+    "seed": 17,
+    "chat_template": false,
+    "thinking": null,
+    "final_answer": false,
+    "adapter_sha256": "8d11607a435dc2cee72dabcf211d257eb3401723b72771a1605e1f56642acdf6",
+    "device": "cpu",
+    "versions": {
+      "torch": "2.14.1+cpu",
+      "transformers": "4.57.6",
+      "peft": "0.21.2"
+    }
+  }
+}

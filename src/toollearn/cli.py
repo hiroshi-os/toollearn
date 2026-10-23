@@ -23,6 +23,9 @@ def main():
     for command in [ev, dist]:
         command.add_argument("--max-steps", type=int, default=8)
         command.add_argument("--max-new-tokens", type=int, default=160)
+    for command in [ev, dist, tr]:
+        command.add_argument("--revision", default=None)
+        command.add_argument("--chat-template", action="store_true")
     args=parser.parse_args()
     if args.command=="data":
         rows=[]
@@ -31,12 +34,12 @@ def main():
         write_jsonl(args.output,rows); print(json.dumps({"records":len(rows),"label_source":"scripted_privileged_oracle"})); return
     if args.command=="train":
         from .training import train
-        print(json.dumps(train(args.data,args.model,args.output,args.steps,args.rank,args.seed))); return
+        print(json.dumps(train(args.data,args.model,args.output,args.steps,args.rank,args.seed,args.revision,args.chat_template))); return
     if args.command=="smoke":
         from .training import smoke
         print(json.dumps(smoke(args.output,args.steps))); return
     if args.command=="distill":
-        policy=HFPolicy(args.teacher,max_new_tokens=args.max_new_tokens); accepted=[]; attempted=[]
+        policy=HFPolicy(args.teacher,max_new_tokens=args.max_new_tokens,revision=args.revision,seed=args.seed,chat_template=args.chat_template); accepted=[]; attempted=[]
         for task in generate("train",args.count,args.seed):
             result=run(task,policy,max_steps=args.max_steps); attempted.append(result)
             if result["success"]:
@@ -49,7 +52,7 @@ def main():
         tasks=generate("test",16,args.seed); results=[run(t,oracle_policy(t)) for t in tasks]
         kind="scripted_oracle_environment_check"; token_measured=False
     else:
-        policy=HFPolicy(args.model,args.adapter,args.max_new_tokens); tasks=generate(args.split,args.count,args.seed)
+        policy=HFPolicy(args.model,args.adapter,args.max_new_tokens,args.revision,args.seed,args.chat_template); tasks=generate(args.split,args.count,args.seed)
         results=[run(t,policy,max_steps=args.max_steps) for t in tasks]; kind="model_evaluation"; token_measured=True
     report={"kind":kind,"model":getattr(args,"model",None),"adapter":getattr(args,"adapter",None),"python":platform.python_version(),"platform":platform.platform(),"seed":args.seed,"split":getattr(args,"split","test"),"max_steps":getattr(args,"max_steps",8),"max_new_tokens":getattr(args,"max_new_tokens",None),"runtime":getattr(locals().get("policy"),"metadata",None),"tokens_measured":token_measured,"summary":summarize(results),"results":results}
     path=Path(args.output); path.parent.mkdir(parents=True,exist_ok=True); path.write_text(json.dumps(report,indent=2),encoding="utf-8")

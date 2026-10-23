@@ -15,18 +15,27 @@ def examples_from_records(records):
             examples.append((prompt_text(turn["messages"]), turn["completion"]))
     return examples
 
-def train(data_path, model_name, output, steps=40, rank=8, seed=17):
+def train(data_path, model_name, output, steps=40, rank=8, seed=17,
+          revision=None, chat_template=False):
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments, set_seed
     from peft import LoraConfig, get_peft_model
     set_seed(seed)
     records=[json.loads(line) for line in Path(data_path).read_text(encoding="utf-8").splitlines() if line]
     examples=examples_from_records(records)
-    tokenizer=AutoTokenizer.from_pretrained(model_name)
+    if not examples:
+        raise ValueError("no training examples")
+    if min(steps, rank) < 1:
+        raise ValueError("steps and rank must be positive")
+    from .runtime import load_model, render
+    tokenizer=AutoTokenizer.from_pretrained(model_name, revision=revision)
     tokenizer.pad_token = tokenizer.eos_token
-    model=get_peft_model(AutoModelForCausalLM.from_pretrained(model_name),
+    model=get_peft_model(load_model(model_name, revision),
         LoraConfig(r=rank, lora_alpha=rank*2, target_modules="all-linear", task_type="CAUSAL_LM"))
     rows=[]
+    if chat_template:
+        examples=[(render(tokenizer, turn["messages"], True), turn["completion"])
+                  for record in records for turn in record["trace"]]
     for prompt, completion in examples:
         prefix=tokenizer.encode(prompt, add_special_tokens=False)
         tail=tokenizer.encode(completion+tokenizer.eos_token, add_special_tokens=False)
@@ -51,6 +60,7 @@ def train(data_path, model_name, output, steps=40, rank=8, seed=17):
         "data_sha256":hashlib.sha256(Path(data_path).read_bytes()).hexdigest(),
         "label_sources":sorted({r.get("label_source","unspecified") for r in records}),
         "seed":seed,"steps":steps,"rank":rank,"learning_rate":2e-4,"examples":len(rows),
+        "chat_template":chat_template,"device":str(model.device),
         "python":platform.python_version(),"platform":platform.platform(),"cuda_available":torch.cuda.is_available(),
         "versions":{name:importlib.metadata.version(name) for name in ["torch","transformers","peft","accelerate"]},
         "metrics":result.metrics}

@@ -28,7 +28,7 @@ python -m toollearn.cli evaluate --model HuggingFaceTB/SmolLM2-135M-Instruct --a
 
 The pretrained commands download weights and require enough CPU RAM or a GPU. The tiny-model smoke needs Torch, Transformers and PEFT but **no download**. It constructs a random one-layer GPT-2 and checks that trainable adapter tensors actually change. It does not evaluate coding ability.
 
-The model protocol is deliberately the same plain role-delimited text during teacher collection, training, and evaluation. It does not use model-specific chat templates. That is reproducible but can disadvantage instruction models; report this limitation with results. Generation is greedy, bounded to 160 tokens per call and eight calls per task. Malformed responses are counted as invalid calls and returned to the model as errors.
+The default model protocol is the same plain role-delimited text during teacher collection, training, and evaluation. Optional `--chat-template` uses the tokenizer's template consistently in all three stages; use the same setting throughout a comparison. Plain text can disadvantage instruction models; report this limitation. Generation is greedy, bounded to 160 tokens per call and eight calls per task. Malformed responses are counted as invalid calls and returned to the model as errors. Training and inference automatically use CUDA when available, otherwise CPU.
 
 ## Actual teacher distillation
 
@@ -41,7 +41,7 @@ python -m toollearn.cli train --model HuggingFaceTB/SmolLM2-135M-Instruct --data
 
 ## What is measured
 
-Each evaluation report records exact task IDs, traces, final exact-match success plus explicit finish, invalid calls, total calls, input/output token counts, and full-episode wall time. Model loading is outside episode latency; on CPU the timer covers tokenization, inference and environment calls. Input tokens include repeated conversation context. Output tokens include all generated tokens, even if protocol delimiters truncate the text passed to the parser. This is an end-to-end CPU harness, not a GPU-serving benchmark.
+Each evaluation report records exact task IDs, traces, final exact-match success plus explicit finish, invalid calls, total calls, input/output token counts, and full-episode wall time. Model loading is outside episode latency; the timer covers tokenization, inference and environment calls. Input tokens include repeated conversation context. Output tokens include all generated tokens, even if protocol delimiters truncate the text passed to the parser. This is an end-to-end experiment harness, not a GPU-serving benchmark.
 
 Train uses rename and constant-literal edits, dev uses arithmetic-operator repair, test uses return-value repair. Splits have disjoint task IDs, file paths and **edit categories**, checked by tests. All categories share the same explicit replace instruction, so this is only a narrow compositional generalization test; it does not establish real repository generalization. The model only receives instructions and tool observations, never expected outputs or oracle metadata. The evaluator checks every file, including absence of unintended edits.
 
@@ -61,11 +61,33 @@ Training writes a manifest with input SHA-256, label sources, resolved model rev
 
 There is no host-shell tool: all reads, searches and edits operate on an in-memory dictionary. Absolute paths, traversal and Windows-drive syntax are rejected. This environment is suitable for generated string-edit tasks, not execution of untrusted repository code.
 
+## Run the remaining experiments in Colab
+
+- [Open pretrained adaptation + teacher distillation in Colab](https://colab.research.google.com/github/hiroshi-os/toollearn/blob/main/notebooks/adaptation_colab.ipynb)
+- [Open reasoning-model final-answer evaluation in Colab](https://colab.research.google.com/github/hiroshi-os/toollearn/blob/main/notebooks/reasoning_colab.ipynb)
+
+Select a GPU runtime manually; no paid resources are provisioned. Each notebook installs pinned Transformers/PEFT versions, clones this repository, checks CUDA/free memory, runs bounded experiments and downloads a ZIP containing reports and any trained adapters. The adaptation notebook enables chat templates consistently by default. Defaults are a 135M student, 0.5B teacher, 16 train tasks, 8 held-out tasks and 20 optimizer updates. Thinking comparison uses Qwen3-0.6B and 24 generated held-outs with 512 output tokens each. These are pilots, not statistically conclusive benchmarks. All full pretrained/GPU runs remain **pending user execution**.
+
+Equivalent commands after installing the train extra:
+
+```powershell
+python -m toollearn.studies --output artifacts/study
+python -m toollearn.reasoning --mode both --output artifacts/reasoning
+```
+
+The study resolves student/teacher Hub references to exact commits before loading any condition; baseline and both adapters share evaluation seeds, tasks and budgets. Teacher rollouts, acceptance count, dataset SHA-256 and collection config are saved. Rerunning reuses the accepted teacher dataset only when its config, task fingerprint and digest match. Zero acceptance produces `skipped_zero_accepted` and no teacher-adapter score. Oracle labels never fill missing teacher examples. GPU objects are released between model phases. LoRA labels mask prompt tokens; maximum training sequence length is 2048 and oversized traces raise an error.
+
+The reasoning suite generates arithmetic, remainder and integer-equation questions with deterministic, disjoint dev/test numeric ranges. It grades only a terminal `FINAL: <integer>` marker by exact integer equality. Thinking mode requires a completed thinking section; truncated outputs receive no intermediate-answer credit. Qwen3's supported `enable_thinking` template option distinguishes modes. Unsupported templates raise an error. Both modes use the same output-token ceiling; reports include budget hits, raw outputs, invalid answers and model/mode provenance. This evaluates final-answer behavior, not the quality or faithfulness of internal reasoning. Use `--mode default` for another chat model without a supported thinking flag.
+
+Local executed validation covers both plain and chat-template LoRA train/save/reload paths, baseline and adapter generation, and final-answer evaluation with a **random** tiny GPT-2. This is plumbing evidence only; no pretrained gains, distillation effectiveness or reasoning-model accuracy have been measured locally. See `VALIDATION.md` and `evidence/hf-integration-colab-paths.json`.
+
 ## References
 
 - [PEFT LoRA](https://huggingface.co/docs/peft/developer_guides/lora)
 - [Transformers Trainer](https://huggingface.co/docs/transformers/main_classes/trainer)
 - [SmolLM2 model card](https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct)
+- [Qwen3 thinking/nonthinking model-card examples](https://huggingface.co/Qwen/Qwen3-0.6B)
+- [Transformers 4.57 chat templates](https://huggingface.co/docs/transformers/v4.57.1/en/chat_templating)
 
 GitHub Actions includes a CPU learning integration job that uploads generated adapter-smoke and train/reload/evaluate reports. A workflow definition alone is not execution evidence; inspect the actual run and artifacts.
 

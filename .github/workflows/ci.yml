@@ -17,6 +17,8 @@ jobs:
     env:
       OMP_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

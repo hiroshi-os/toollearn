@@ -44,13 +44,30 @@ def oracle_policy(task):
     actions = oracle_actions(task)
     return lambda messages, step: (json.dumps(actions[min(step,len(actions)-1)]), {})
 
+
+def decode_generation(tokenizer, generated, final_answer=False):
+    if not final_answer:
+        return tokenizer.decode(generated, skip_special_tokens=True).split("\nTOOL:")[0].split("\nUSER:")[0].strip()
+    # Some tokenizers classify thinking markers as special. Preserve these while
+    # removing transport/end tokens, so parsing cannot credit unfinished thinking.
+    text = tokenizer.decode(generated, skip_special_tokens=False)
+    for token in tokenizer.all_special_tokens:
+        if token not in {"<think>", "</think>"}:
+            text = text.replace(token, "")
+    return text.strip()
+
 class HFPolicy:
-    def __init__(self, model_name, adapter=None, max_new_tokens=160):
+    def __init__(self, model_name, adapter=None, max_new_tokens=160, revision=None,
+                 seed=17, chat_template=False, thinking=None, final_answer=False):
         import torch
         from transformers import AutoTokenizer, AutoModelForCausalLM
         self.torch = torch
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        from .runtime import load_model, seed_all
+        seed_all(seed)
+        self.chat_template, self.thinking = chat_template, thinking
+        self.final_answer = final_answer
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
+        self.model = load_model(model_name, revision)
         if adapter:
             from peft import PeftModel
             self.model = PeftModel.from_pretrained(self.model, adapter)
@@ -58,17 +75,22 @@ class HFPolicy:
         self.max_new_tokens = max_new_tokens
         self.metadata = {"model": model_name, "adapter": adapter,
             "model_revision": getattr(self.model.config, "_commit_hash", None),
+            "tokenizer_revision": self.tokenizer.init_kwargs.get("_commit_hash"),
+            "requested_revision": revision,
+            "seed": seed, "chat_template": chat_template, "thinking": thinking, "final_answer": final_answer,
             "adapter_sha256": hashlib.sha256(Path(adapter, "adapter_model.safetensors").read_bytes()).hexdigest() if adapter and Path(adapter, "adapter_model.safetensors").exists() else None,
             "device": str(next(self.model.parameters()).device),
             "versions": {name:importlib.metadata.version(name) for name in ["torch", "transformers", "peft"]}}
 
     def __call__(self, messages, step):
-        inputs = self.tokenizer(prompt_text(messages), return_tensors="pt")
+        from .runtime import render
+        text = render(self.tokenizer, messages, self.chat_template, self.thinking)
+        inputs = self.tokenizer(text, add_special_tokens=False, return_tensors="pt").to(self.model.device)
         with self.torch.inference_mode():
             result = self.model.generate(**inputs, max_new_tokens=self.max_new_tokens, do_sample=False,
                 pad_token_id=self.tokenizer.eos_token_id)
         generated = result[0, inputs["input_ids"].shape[1]:]
-        raw = self.tokenizer.decode(generated, skip_special_tokens=True).split("\nTOOL:")[0].split("\nUSER:")[0].strip()
+        raw = decode_generation(self.tokenizer, generated, self.final_answer)
         return raw, {"input_tokens":inputs["input_ids"].shape[1], "output_tokens":len(generated)}
 
 def summarize(results):
