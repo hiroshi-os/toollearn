@@ -11,7 +11,13 @@ Executed from this repository with `PYTHONPATH=src`:
 
 ## Learning evidence
 
-HF/PEFT adapter smoke and the end-to-end train/reload/evaluate integration are implemented but dependency installation is still in progress. This document will be updated with actual results when executable. No pretrained-model adaptation, teacher-generated dataset, generalization improvement or GPU performance result is claimed.
+Executed locally with Torch 2.14.1+cpu, Transformers 4.57.6 and PEFT 0.21.2:
+
+- `python -m toollearn.cli smoke --output artifacts/smoke`: four optimizer steps on a random local one-layer GPT-2. Both LoRA A/B tensors changed. Full output is `evidence/lora-smoke.json`. This is evidence of adapter optimization, not task accuracy.
+- `python tests/integration_hf.py`: the actual completion-masked Trainer completed two updates, saved the adapter, reloaded it, and generated 16 tokens across two bounded tool calls. The random model did **not** solve the evaluation task. See `evidence/hf-integration.json`.
+- GitHub CPU CI also completed successfully after initial publication. New commits may be checked separately; see the Actions page for the current status.
+
+No pretrained-model adaptation, accepted model-teacher dataset, generalization improvement or GPU performance result is claimed. The default teacher and pretrained training commands remain executable experiments to run, not completed quality results.
 
 ## Reproduce the optional integration
 

@@ -1,0 +1,15 @@
+{
+  "kind": "random_tiny_model_adapter_smoke_only",
+  "steps": 4,
+  "losses": [
+    3.458862543106079,
+    3.4620368480682373,
+    3.4512314796447754,
+    3.4534592628479004
+  ],
+  "changed_adapter_tensors": [
+    "base_model.model.transformer.h.0.attn.c_attn.lora_A.default.weight",
+    "base_model.model.transformer.h.0.attn.c_attn.lora_B.default.weight"
+  ],
+  "task_accuracy_measured": false
+}

@@ -1,0 +1,20 @@
+{
+  "kind": "random_model_train_reload_evaluate_integration",
+  "train_steps": 2,
+  "train_loss": 4.45546555519104,
+  "evaluation_calls": 2,
+  "output_tokens": 16,
+  "task_success": false,
+  "runtime": {
+    "model": "C:\\Users\\BIT\\AppData\\Local\\Temp\\toollearn-integration-pc3hmyyv\\base",
+    "adapter": "C:\\Users\\BIT\\AppData\\Local\\Temp\\toollearn-integration-pc3hmyyv\\adapter",
+    "model_revision": null,
+    "adapter_sha256": "17c783cd2e4c74269ce73303c6f8b78b494c55df67ed5f607037f5353e03cbb5",
+    "device": "cpu",
+    "versions": {
+      "torch": "2.14.1+cpu",
+      "transformers": "4.57.6",
+      "peft": "0.21.2"
+    }
+  }
+}
