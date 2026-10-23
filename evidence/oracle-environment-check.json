@@ -1,0 +1,22 @@
+{
+  "kind": "scripted_oracle_environment_check",
+  "model": null,
+  "adapter": null,
+  "python": "3.12.5",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "seed": 17,
+  "split": "test",
+  "max_steps": 8,
+  "max_new_tokens": null,
+  "runtime": null,
+  "tokens_measured": false,
+  "summary": {
+    "tasks": 16,
+    "success_rate": 1.0,
+    "invalid_call_rate": 0.0,
+    "mean_calls": 4.0,
+    "mean_latency_seconds": 4.8925005103228614e-05,
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
+}
