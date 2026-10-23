@@ -3,6 +3,7 @@ Run with the train extra installed: python tests/integration_hf.py
 This random model is not a competent coding agent.
 """
 import json
+import argparse
 import tempfile
 from pathlib import Path
 import torch
@@ -16,6 +17,9 @@ from toollearn.experiment import run, oracle_policy, HFPolicy, prompt_text
 from toollearn.training import train
 
 def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--output",default="artifacts/integration.json")
+    args=parser.parse_args()
     torch.set_num_threads(1)
     with tempfile.TemporaryDirectory(prefix="toollearn-integration-") as directory:
         root=Path(directory); base=root/"base"; base.mkdir()
@@ -35,6 +39,9 @@ def main():
         policy=HFPolicy(str(base),str(root/"adapter"),max_new_tokens=8)
         result=run(generate("test",1)[0],policy,max_steps=2)
         assert result["calls"]<=2 and result["output_tokens"]>0
-        print(json.dumps({"kind":"random_model_train_reload_evaluate_integration","train_steps":2,"train_loss":metrics["train_loss"],"evaluation_calls":result["calls"],"output_tokens":result["output_tokens"],"task_success":result["success"]}))
+        report={"kind":"random_model_train_reload_evaluate_integration","train_steps":2,"train_loss":metrics["train_loss"],"evaluation_calls":result["calls"],"output_tokens":result["output_tokens"],"task_success":result["success"],"runtime":policy.metadata}
+        path=Path(args.output); path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_text(json.dumps(report,indent=2),encoding="utf-8")
+        print(json.dumps(report))
 
 if __name__=="__main__": main()

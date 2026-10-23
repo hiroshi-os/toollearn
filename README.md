@@ -67,4 +67,6 @@ There is no host-shell tool: all reads, searches and edits operate on an in-memo
 - [Transformers Trainer](https://huggingface.co/docs/transformers/main_classes/trainer)
 - [SmolLM2 model card](https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct)
 
+GitHub Actions includes a CPU learning integration job that uploads generated adapter-smoke and train/reload/evaluate reports. A workflow definition alone is not execution evidence; inspect the actual run and artifacts.
+
 MIT licensed. See `VALIDATION.md` for executed checks and the boundary between implementation and experimental evidence.
